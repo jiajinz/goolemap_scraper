@@ -1,0 +1,67 @@
+import os
+import csv
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
+
+def get_google_maps_data(location):
+    # Start a Chrome web driver
+    driver = webdriver.Chrome(executable_path="C:\\Users8\\Downloads\\chromedriver-win64\\chromedriver-win64\\chromedriver.exe")
+
+    # Navigate to Google Maps
+    driver.get("https://www.google.com/maps")
+
+    # Find the search box and input the location
+    search_box = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "input#searchboxinput")))
+    search_box.send_keys(location)
+    search_box.send_keys(Keys.RETURN)
+
+    # Wait for the search results to load
+    WebDriverWait(driver, 5).until(EC.presence_of_all_elements_located((By.CLASS_NAME, "section-result")))
+
+    # Find all the search results
+    results = driver.find_elements(By.CLASS_NAME, "section-result")
+
+    # Extract data from each search result
+    data = []
+    for result in results:
+        name = result.find_element(By.CLASS_NAME, "section-result-title").text
+        address = result.find_element(By.CLASS_NAME, "section-result-location").text
+        try:
+            website = result.find_element(By.CSS_SELECTOR, "div[data-value='website']").text
+        except:
+            website = "N/A"
+        try:
+            phone = result.find_element(By.CLASS_NAME, "section-result-phone-number").text
+        except:
+            phone = "N/A"
+        data.append({
+            "name": name,
+            "address": address,
+            "website": website,
+            "phone": phone
+        })
+
+    # Close the browser
+    driver.quit()
+
+    return data
+
+def save_to_csv(data, filename):
+    with open(filename, "w", newline="", encoding="utf-8") as csvfile:
+        fieldnames = ["name", "address", "website", "phone"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for item in data:
+            writer.writerow(item)
+
+if __name__ == "__main__":
+    location = "car audio installation shops Las Vegas, NV"  # Modify this according to your search query
+    csv_path = ""
+    if not os.path.exists(os.path.dirname(csv_path)):
+        os.makedirs(os.path.dirname(csv_path))
+    data = get_google_maps_data(location)
+    save_to_csv(data, csv_path)
+    print(f"Data has been scraped and saved to '{csv_path}'")
